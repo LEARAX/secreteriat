@@ -3,9 +3,9 @@ use serenity::framework::standard::{
     macros::{command, group},
     CommandResult, StandardFramework,
 };
-use serenity::model::channel::Message;
-use serenity::model::gateway::Ready;
+use serenity::model::{channel::Message, channel::ReactionType, gateway::Ready};
 use serenity::prelude::{Context, EventHandler};
+use serenity::utils::MessageBuilder;
 
 #[command]
 fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
@@ -17,6 +17,7 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
 // TODO Handle unwrap()
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
+    let react_success = ReactionType::Unicode(String::from("✅"));
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
     let mut member = msg
         .guild_id
@@ -27,15 +28,18 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         if let Some(role) = arc.read().role_by_name(role_name) {
             if msg.member.as_ref().unwrap().roles.contains(&role.id) {
                 println!("Removing role {} from user...", &role.name);
-                member.remove_role(&ctx.http, role.id)?;
+                if let Ok(_) = member.remove_role(&ctx.http, role.id) {
+                    msg.react(&ctx.http, react_success)?;
+                }
             } else {
                 println!("Adding role {} to user...", &role.name);
                 member.add_role(&ctx.http, role.id)?;
+                msg.react(&ctx.http, react_success)?;
             }
         } // TODO Handle role not found
     } // TODO Handle failure to get the guild info
-
     Ok(())
+
 }
 
 #[group]
