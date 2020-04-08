@@ -1,0 +1,11 @@
+[package]
+name = "secreteriat"
+version = "0.1.0"
+authors = ["William Culhane <sxroka@gmail.com>"]
+edition = "2018"
+description = "A Discord bot for general use"
+keywords = ["discord", "bot", "chat"]
+
+
+[dependencies]
+serenity = "0.8.1"
