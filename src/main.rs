@@ -14,13 +14,19 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
     Ok(())
 }
 
+// TODO Handle unwrap()
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
+    let member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id);
     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
             if let Some(role) = arc.read().role_by_name(role_name) {
                 if msg.member.as_ref().unwrap().roles.contains(&role.id) {
-                    println!("YES");
+                    println!("Removing role {} from user...", &role.name);
+                    member.unwrap().remove_role(&ctx.http, role.id);
+                } else {
+                    println!("Adding role {} to user...", &role.name);
+                    member.unwrap().add_role(&ctx.http, role.id);
                 }
             } // TODO Handle role not found
     } // TODO Handle failure to get the guild info
