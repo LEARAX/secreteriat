@@ -6,7 +6,6 @@ edition = "2018"
 description = "A Discord bot for general use"
 repository = "https://github.com/LEARAX/secreteriat"
 license = "Unlicense"
-license-file = "LICENSE"
 keywords = ["discord", "bot", "chat"]
 
 
