@@ -39,7 +39,6 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         } // TODO Handle role not found
     } // TODO Handle failure to get the guild info
     Ok(())
-
 }
 
 #[group]
