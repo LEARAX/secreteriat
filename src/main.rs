@@ -4,8 +4,8 @@ use serenity::framework::standard::{
     CommandResult, StandardFramework,
 };
 use serenity::model::channel::Message;
-use serenity::prelude::{Context, EventHandler};
 use serenity::model::gateway::Ready;
+use serenity::prelude::{Context, EventHandler};
 
 #[command]
 fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
@@ -18,17 +18,21 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
-    let member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id);
+    let mut member = msg
+        .guild_id
+        .unwrap()
+        .member(&ctx.http, msg.author.id)
+        .unwrap();
     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
-            if let Some(role) = arc.read().role_by_name(role_name) {
-                if msg.member.as_ref().unwrap().roles.contains(&role.id) {
-                    println!("Removing role {} from user...", &role.name);
-                    member.unwrap().remove_role(&ctx.http, role.id);
-                } else {
-                    println!("Adding role {} to user...", &role.name);
-                    member.unwrap().add_role(&ctx.http, role.id);
-                }
-            } // TODO Handle role not found
+        if let Some(role) = arc.read().role_by_name(role_name) {
+            if msg.member.as_ref().unwrap().roles.contains(&role.id) {
+                println!("Removing role {} from user...", &role.name);
+                member.remove_role(&ctx.http, role.id)?;
+            } else {
+                println!("Adding role {} to user...", &role.name);
+                member.add_role(&ctx.http, role.id)?;
+            }
+        } // TODO Handle role not found
     } // TODO Handle failure to get the guild info
 
     Ok(())
