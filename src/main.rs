@@ -19,6 +19,10 @@ const COMMAND_LIST: &[Command<'static>] = &[
         name: "role",
         description: "Toggles a whitelisted role",
     },
+    Command {
+        name: "roles",
+        description: "Prints a list of roles",
+    },
 ];
 
 const REACT_SUCCESS: &str = "✅";
@@ -33,6 +37,12 @@ lazy_static! {
             .expect("Failed to read config");
         toml::from_slice(&buffer).expect("Failed to parse config")
     };
+    static ref ROLES: std::collections::BTreeMap<&'static str, &'static str> = {
+        [("Factorio", "The factory must grow")]
+            .iter()
+            .cloned()
+            .collect()
+    };
 }
 
 struct Command<'a> {
@@ -43,11 +53,11 @@ struct Command<'a> {
 #[derive(Deserialize)]
 struct Config {
     token: String,
-    allowed_roles: Vec<String>,
+    allowed_roles: std::collections::BTreeMap<String, String>,
 }
 
 #[group]
-#[commands(help, role)]
+#[commands(help, role, roles)]
 struct General;
 
 struct Handler;
@@ -116,7 +126,7 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         let role_name = msg_split[1];
         let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
 
-        if CONFIG.allowed_roles.contains(&String::from(role_name)) {
+        if CONFIG.allowed_roles.contains_key(&String::from(role_name)) {
             if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
                 if let Some(role) = arc.read().role_by_name(role_name) {
                     if msg.member.as_ref().unwrap().roles.contains(&role.id) {
@@ -147,5 +157,27 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         msg.react(&ctx.http, REACT_FAIL)?;
         help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
     }
+    Ok(())
+}
+
+#[command]
+fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("Printing role list...");
+    msg.channel_id.send_message(&ctx.http, |response| {
+        response.embed(|embed| {
+            let e = embed.title("Role list")
+                .author(|a| {
+                    a.name("The Secreteriat")
+                    .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                })
+                .color(Color::from_rgb(127,127,255))
+                .thumbnail("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flag_of_the_United_Nations.svg/1280px-Flag_of_the_United_Nations.svg.png");
+            for role in &CONFIG.allowed_roles {
+                e.field(role.0, role.1, true);
+            };
+            e
+        });
+        response
+    })?;
     Ok(())
 }
