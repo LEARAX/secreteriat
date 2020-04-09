@@ -11,3 +11,6 @@ keywords = ["discord", "bot", "chat"]
 
 [dependencies]
 serenity = "0.8.1"
+serde = {version = "1.0.106", features = ["derive"]}
+toml = "0.5.6"
+lazy_static = "1.4.0"

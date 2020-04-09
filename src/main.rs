@@ -1,11 +1,38 @@
+use lazy_static::lazy_static;
+use serde::Deserialize;
 use serenity::client::Client;
 use serenity::framework::standard::{
     macros::{command, group},
     CommandResult, StandardFramework,
 };
-use serenity::model::{channel::Message, channel::ReactionType, gateway::Ready};
+use serenity::model::{
+    channel::{Message, ReactionType},
+    gateway::Ready,
+};
 use serenity::prelude::{Context, EventHandler};
 use serenity::utils::MessageBuilder;
+use std::fs::File;
+use std::io::prelude::*;
+
+const REACT_SUCCESS: &str = "✅";
+const REACT_FAIL: &str = "🟥";
+
+lazy_static! {
+    static ref CONFIG: Config = {
+        let mut config_file = File::open("config.toml").expect("Failed to open config");
+        let mut buffer = Vec::new();
+        config_file
+            .read_to_end(&mut buffer)
+            .expect("Failed to read config");
+        toml::from_slice(&buffer).expect("Failed to parse config")
+    };
+}
+
+#[derive(Deserialize)]
+struct Config {
+    token: String,
+    allowed_roles: toml::value::Array,
+}
 
 #[group]
 #[commands(role)]
@@ -20,8 +47,9 @@ impl EventHandler for Handler {
 }
 
 fn main() {
-    let mut client = Client::new(&std::env::var("DISCORD_TOKEN").expect("token"), Handler)
-        .expect("Error creating client");
+    serenity::client::validate_token(&CONFIG.token).expect("Token does not appear valid");
+
+    let mut client = Client::new(&CONFIG.token, Handler).expect("Error creating client");
     client.with_framework(
         StandardFramework::new()
             .configure(|c| c.prefix(">"))
@@ -35,39 +63,34 @@ fn main() {
 
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
-    // These should probably be const, but serenity uses String for some reason
-    let react_success = ReactionType::Unicode(String::from("✅"));
-    let react_fail = ReactionType::Unicode(String::from("🟥"));
-
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
     let mut member = msg
         .guild_id
         .unwrap()
-        .member(&ctx.http, msg.author.id)
-        .unwrap();
+        .member(&ctx.http, msg.author.id)?;
 
     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
         if let Some(role) = arc.read().role_by_name(role_name) {
             if msg.member.as_ref().unwrap().roles.contains(&role.id) {
                 println!("Removing role {} from user...", &role.name);
                 let reaction = match member.remove_role(&ctx.http, role.id) {
-                    Ok(_) => react_success,
-                    Err(_) => react_fail,
+                    Ok(_) => REACT_SUCCESS,
+                    Err(_) => REACT_FAIL,
                 };
                 msg.react(&ctx.http, reaction)?;
             } else {
                 println!("Adding role {} to user...", &role.name);
                 let reaction = match member.add_role(&ctx.http, role.id) {
-                    Ok(_) => react_success,
-                    Err(_) => react_fail,
+                    Ok(_) => REACT_SUCCESS,
+                    Err(_) => REACT_FAIL,
                 };
                 msg.react(&ctx.http, reaction)?;
             }
         } else {
-            msg.react(&ctx.http, react_fail)?;
+            msg.react(&ctx.http, REACT_FAIL)?;
         }
     } else {
-        msg.react(&ctx.http, react_fail)?;
+        msg.react(&ctx.http, REACT_FAIL)?;
     }
     Ok(())
 }
