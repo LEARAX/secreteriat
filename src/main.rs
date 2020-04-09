@@ -74,26 +74,31 @@ fn main() {
 
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
-    let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
+    let msg_split = msg.content.split(" ").collect::<Vec<&str>>();
+    if msg_split.len() == 2 {
+        let role_name = msg_split[1];
+        let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
 
-    if CONFIG.allowed_roles.contains(&String::from(role_name)) {
-        if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
-            if let Some(role) = arc.read().role_by_name(role_name) {
-                if msg.member.as_ref().unwrap().roles.contains(&role.id) {
-                    println!("Removing role {} from user...", &role.name);
-                    let reaction = match member.remove_role(&ctx.http, role.id) {
-                        Ok(_) => REACT_SUCCESS,
-                        Err(_) => REACT_FAIL,
-                    };
-                    msg.react(&ctx.http, reaction)?;
+        if CONFIG.allowed_roles.contains(&String::from(role_name)) {
+            if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
+                if let Some(role) = arc.read().role_by_name(role_name) {
+                    if msg.member.as_ref().unwrap().roles.contains(&role.id) {
+                        println!("Removing role {} from user...", &role.name);
+                        let reaction = match member.remove_role(&ctx.http, role.id) {
+                            Ok(_) => REACT_SUCCESS,
+                            Err(_) => REACT_FAIL,
+                        };
+                        msg.react(&ctx.http, reaction)?;
+                    } else {
+                        println!("Adding role {} to user...", &role.name);
+                        let reaction = match member.add_role(&ctx.http, role.id) {
+                            Ok(_) => REACT_SUCCESS,
+                            Err(_) => REACT_FAIL,
+                        };
+                        msg.react(&ctx.http, reaction)?;
+                    }
                 } else {
-                    println!("Adding role {} to user...", &role.name);
-                    let reaction = match member.add_role(&ctx.http, role.id) {
-                        Ok(_) => REACT_SUCCESS,
-                        Err(_) => REACT_FAIL,
-                    };
-                    msg.react(&ctx.http, reaction)?;
+                    msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
                 msg.react(&ctx.http, REACT_FAIL)?;
