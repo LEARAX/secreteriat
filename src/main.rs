@@ -37,12 +37,6 @@ lazy_static! {
             .expect("Failed to read config");
         toml::from_slice(&buffer).expect("Failed to parse config")
     };
-    static ref ROLES: std::collections::BTreeMap<&'static str, &'static str> = {
-        [("Factorio", "The factory must grow")]
-            .iter()
-            .cloned()
-            .collect()
-    };
 }
 
 struct Command<'a> {
