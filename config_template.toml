@@ -1,0 +1,7 @@
+token = "TOKEN"
+name = "EMBED_AUTHOR_NAME"
+thumbnail = "THUMBNAIL_URL"
+bot_channel = "BOT_CHANNEL"
+
+[allowed_roles]
+"Allowed" = "A role for all!"

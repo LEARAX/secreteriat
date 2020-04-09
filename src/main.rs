@@ -47,6 +47,9 @@ struct Command<'a> {
 #[derive(Deserialize)]
 struct Config {
     token: String,
+    name: String,
+    thumbnail: String,
+    bot_channel: String,
     allowed_roles: std::collections::BTreeMap<String, String>,
 }
 
@@ -75,7 +78,7 @@ fn main() {
             .group(&GENERAL_GROUP)
             .before(|ctx, msg, _| {
                 if let Some(channel) = msg.channel_id.name(&ctx.cache) {
-                    channel == "roles"
+                    channel == CONFIG.bot_channel
                 } else {
                     false
                 }
@@ -99,11 +102,11 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
             let e = embed.title("Command list")
                 .description("All commands must be prefixed by `>`")
                 .author(|a| {
-                    a.name("The Secreteriat")
+                    a.name(&CONFIG.name)
                     .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                 })
                 .color(Color::from_rgb(127,127,255))
-                .thumbnail("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flag_of_the_United_Nations.svg/1280px-Flag_of_the_United_Nations.svg.png");
+                .thumbnail(&CONFIG.thumbnail);
             for command in COMMAND_LIST.iter() {
                 e.field(command.name, command.description, true);
             };
@@ -162,11 +165,11 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
         response.embed(|embed| {
             let e = embed.title("Role list")
                 .author(|a| {
-                    a.name("The Secreteriat")
+                    a.name(&CONFIG.name)
                     .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                 })
                 .color(Color::from_rgb(127,127,255))
-                .thumbnail("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flag_of_the_United_Nations.svg/1280px-Flag_of_the_United_Nations.svg.png");
+                .thumbnail(&CONFIG.thumbnail);
             for role in &CONFIG.allowed_roles {
                 e.field(role.0, role.1, true);
             };
