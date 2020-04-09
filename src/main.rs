@@ -18,23 +18,31 @@ fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let react_success = ReactionType::Unicode(String::from("✅"));
+    let react_fail = ReactionType::Unicode(String::from("🟥"));
+
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
     let mut member = msg
         .guild_id
         .unwrap()
         .member(&ctx.http, msg.author.id)
         .unwrap();
+
     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
         if let Some(role) = arc.read().role_by_name(role_name) {
             if msg.member.as_ref().unwrap().roles.contains(&role.id) {
                 println!("Removing role {} from user...", &role.name);
-                if let Ok(_) = member.remove_role(&ctx.http, role.id) {
-                    msg.react(&ctx.http, react_success)?;
-                }
+                let reaction = match member.remove_role(&ctx.http, role.id) {
+                    Ok(_) => react_success,
+                    Err(_) => react_fail,
+                };
+                msg.react(&ctx.http, reaction)?;
             } else {
                 println!("Adding role {} to user...", &role.name);
-                member.add_role(&ctx.http, role.id)?;
-                msg.react(&ctx.http, react_success)?;
+                let reaction = match member.add_role(&ctx.http, role.id) {
+                    Ok(_) => react_success,
+                    Err(_) => react_fail,
+                };
+                msg.react(&ctx.http, reaction)?;
             }
         } // TODO Handle role not found
     } // TODO Handle failure to get the guild info
