@@ -52,8 +52,22 @@ fn main() {
     let mut client = Client::new(&CONFIG.token, Handler).expect("Error creating client");
     client.with_framework(
         StandardFramework::new()
-            .configure(|c| c.prefix(">"))
-            .group(&GENERAL_GROUP),
+            .configure(|c| {
+                c.prefix(">");
+                c.allow_dm(false)
+            })
+            .group(&GENERAL_GROUP)
+            .before(|ctx, msg, _| {
+                if let Some(channel) = msg.channel_id.name(&ctx.cache) {
+                    channel == "bot-commands"
+                } else {
+                    false
+                }
+            })
+            .on_dispatch_error(|ctx, msg, err| {
+                println!("UNHANDLED ERROR: {:?}", err);
+                msg.react(&ctx.http, REACT_FAIL).unwrap();
+            }),
     );
 
     if let Err(err) = client.start() {
