@@ -1,15 +1,25 @@
 use lazy_static::lazy_static;
 use serde::Deserialize;
-use serenity::client::Client;
 use serenity::framework::standard::{
     macros::{command, group},
-    CommandResult, StandardFramework,
+    Args, CommandResult, Delimiter, StandardFramework,
 };
-use serenity::model::{channel::Message, gateway::Ready};
-use serenity::prelude::{Context, EventHandler};
-use serenity::utils::MessageBuilder;
+use serenity::model::{channel::Message, gateway::Ready, user::CurrentUser};
+use serenity::prelude::*;
+use serenity::utils::Color;
 use std::fs::File;
 use std::io::prelude::*;
+
+const COMMAND_LIST: &[Command<'static>] = &[
+    Command {
+        name: "help",
+        description: "Prints help information",
+    },
+    Command {
+        name: "role",
+        description: "Toggles a whitelisted role",
+    },
+];
 
 const REACT_SUCCESS: &str = "✅";
 const REACT_FAIL: &str = "🟥";
@@ -25,6 +35,11 @@ lazy_static! {
     };
 }
 
+struct Command<'a> {
+    name: &'a str,
+    description: &'a str,
+}
+
 #[derive(Deserialize)]
 struct Config {
     token: String,
@@ -32,7 +47,7 @@ struct Config {
 }
 
 #[group]
-#[commands(role)]
+#[commands(help, role)]
 struct General;
 
 struct Handler;
@@ -73,6 +88,28 @@ fn main() {
 }
 
 #[command]
+fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("Printing help message...");
+    msg.channel_id.send_message(&ctx.http, |response| {
+        response.embed(|embed| {
+            let e = embed.title("Command list")
+                .author(|a| {
+                    a.name("The Secreteriat")
+                    .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                })
+                .color(Color::from_rgb(127,127,255))
+                .thumbnail("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flag_of_the_United_Nations.svg/1280px-Flag_of_the_United_Nations.svg.png");
+            for command in COMMAND_LIST.iter() {
+                e.field(command.name, command.description, false);
+            };
+            e
+        });
+        response
+    })?;
+    Ok(())
+}
+
+#[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let msg_split = msg.content.split(" ").collect::<Vec<&str>>();
     if msg_split.len() == 2 {
@@ -108,6 +145,7 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         }
     } else {
         msg.react(&ctx.http, REACT_FAIL)?;
+        help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
     }
     Ok(())
 }
