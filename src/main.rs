@@ -7,10 +7,35 @@ use serenity::model::{channel::Message, channel::ReactionType, gateway::Ready};
 use serenity::prelude::{Context, EventHandler};
 use serenity::utils::MessageBuilder;
 
-// TODO Handle unwrap()
+#[group]
+#[commands(role)]
+struct General;
+
+struct Handler;
+
+impl EventHandler for Handler {
+    fn ready(&self, _: Context, _: Ready) {
+        println!("Secreteriat online");
+    }
+}
+
+fn main() {
+    let mut client = Client::new(&std::env::var("DISCORD_TOKEN").expect("token"), Handler)
+        .expect("Error creating client");
+    client.with_framework(
+        StandardFramework::new()
+            .configure(|c| c.prefix(">"))
+            .group(&GENERAL_GROUP),
+    );
+
+    if let Err(err) = client.start() {
+        panic!("An error occurred while running the client: {:?}", err);
+    }
+}
+
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
-    // These should probably be static, but serenity uses String for some reason
+    // These should probably be const, but serenity uses String for some reason
     let react_success = ReactionType::Unicode(String::from("✅"));
     let react_fail = ReactionType::Unicode(String::from("🟥"));
 
@@ -45,30 +70,4 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         msg.react(&ctx.http, react_fail)?;
     }
     Ok(())
-}
-
-#[group]
-#[commands(role)]
-struct General;
-
-struct Handler;
-
-impl EventHandler for Handler {
-    fn ready(&self, _: Context, _: Ready) {
-        println!("Secreteriat online");
-    }
-}
-
-fn main() {
-    let mut client = Client::new(&std::env::var("DISCORD_TOKEN").expect("token"), Handler)
-        .expect("Error creating client");
-    client.with_framework(
-        StandardFramework::new()
-            .configure(|c| c.prefix(">"))
-            .group(&GENERAL_GROUP),
-    );
-
-    if let Err(err) = client.start() {
-        panic!("An error occurred while running the client: {:?}", err);
-    }
 }
