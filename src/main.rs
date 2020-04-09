@@ -5,10 +5,7 @@ use serenity::framework::standard::{
     macros::{command, group},
     CommandResult, StandardFramework,
 };
-use serenity::model::{
-    channel::{Message, ReactionType},
-    gateway::Ready,
-};
+use serenity::model::{channel::Message, gateway::Ready};
 use serenity::prelude::{Context, EventHandler};
 use serenity::utils::MessageBuilder;
 use std::fs::File;
