@@ -7,16 +7,10 @@ use serenity::model::{channel::Message, channel::ReactionType, gateway::Ready};
 use serenity::prelude::{Context, EventHandler};
 use serenity::utils::MessageBuilder;
 
-#[command]
-fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.reply(ctx, "Pong!")?;
-
-    Ok(())
-}
-
 // TODO Handle unwrap()
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
+    // These should probably be static, but serenity uses String for some reason
     let react_success = ReactionType::Unicode(String::from("✅"));
     let react_fail = ReactionType::Unicode(String::from("🟥"));
 
@@ -44,13 +38,17 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                 };
                 msg.react(&ctx.http, reaction)?;
             }
-        } // TODO Handle role not found
-    } // TODO Handle failure to get the guild info
+        } else {
+            msg.react(&ctx.http, react_fail)?;
+        }
+    } else {
+        msg.react(&ctx.http, react_fail)?;
+    }
     Ok(())
 }
 
 #[group]
-#[commands(ping, role)]
+#[commands(role)]
 struct General;
 
 struct Handler;
