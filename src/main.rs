@@ -81,7 +81,7 @@ fn main() {
             .group(&GENERAL_GROUP)
             .before(|ctx, msg, _| {
                 if let Some(channel) = msg.channel_id.name(&ctx.cache) {
-                    channel == "bot-commands"
+                    channel == "roles"
                 } else {
                     false
                 }
@@ -122,8 +122,8 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let msg_split = msg.content.split(" ").collect::<Vec<&str>>();
-    if msg_split.len() == 2 {
-        let role_name = msg_split[1];
+    if msg_split.len() >= 2 {
+        let role_name = &msg.content[6..];
         let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
 
         if CONFIG.allowed_roles.contains_key(&String::from(role_name)) {
