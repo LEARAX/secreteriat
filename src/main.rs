@@ -64,10 +64,7 @@ fn main() {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     let role_name = msg.content.split(" ").collect::<Vec<&str>>()[1];
-    let mut member = msg
-        .guild_id
-        .unwrap()
-        .member(&ctx.http, msg.author.id)?;
+    let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
 
     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
         if let Some(role) = arc.read().role_by_name(role_name) {
