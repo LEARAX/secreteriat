@@ -97,6 +97,7 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx.http, |response| {
         response.embed(|embed| {
             let e = embed.title("Command list")
+                .description("All commands must be prefixed by `>`")
                 .author(|a| {
                     a.name("The Secreteriat")
                     .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
@@ -104,7 +105,7 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
                 .color(Color::from_rgb(127,127,255))
                 .thumbnail("https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Flag_of_the_United_Nations.svg/1280px-Flag_of_the_United_Nations.svg.png");
             for command in COMMAND_LIST.iter() {
-                e.field(command.name, command.description, false);
+                e.field(command.name, command.description, true);
             };
             e
         });
