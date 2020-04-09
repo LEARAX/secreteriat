@@ -99,17 +99,18 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
     println!("Printing help message...");
     msg.channel_id.send_message(&ctx.http, |response| {
         response.embed(|embed| {
-            let e = embed.title("Command list")
+            let e = embed
+                .title("Command list")
                 .description("All commands must be prefixed by `>`")
                 .author(|a| {
                     a.name(&CONFIG.name)
-                    .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                        .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                 })
-                .color(Color::from_rgb(127,127,255))
+                .color(Color::from_rgb(127, 127, 255))
                 .thumbnail(&CONFIG.thumbnail);
             for command in COMMAND_LIST.iter() {
                 e.field(command.name, command.description, true);
-            };
+            }
             e
         });
         response
@@ -163,16 +164,17 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
     println!("Printing role list...");
     msg.channel_id.send_message(&ctx.http, |response| {
         response.embed(|embed| {
-            let e = embed.title("Role list")
+            let e = embed
+                .title("Role list")
                 .author(|a| {
                     a.name(&CONFIG.name)
-                    .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                        .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                 })
-                .color(Color::from_rgb(127,127,255))
+                .color(Color::from_rgb(127, 127, 255))
                 .thumbnail(&CONFIG.thumbnail);
             for role in &CONFIG.allowed_roles {
                 e.field(role.0, role.1, true);
-            };
+            }
             e
         });
         response
