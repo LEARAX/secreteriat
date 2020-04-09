@@ -10,7 +10,7 @@ keywords = ["discord", "bot", "chat"]
 
 [package.metadata.release]
 no-dev-version = true
-pre-release-hook = "cargo fmt"
+pre-release-hook = ["cargo", "fmt"]
 
 [dependencies]
 serenity = "0.8.1"
