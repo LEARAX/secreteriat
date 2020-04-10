@@ -105,9 +105,8 @@ fn main() {
             .on_dispatch_error(|ctx, msg, err| {
                 eprintln!("ENCOUNTERED UNHANDLED ERROR: {:?}", err);
                 match msg.react(&ctx.http, REACT_FAIL) {
-                    Ok(_) => eprintln!("Encountered general error: {:?}", err),
+                    Ok(_) => {}
                     Err(rerr) => {
-                        eprintln!("Encountered general error: {:?}", err);
                         eprintln!("Encountered additional reaction error: {:?}", rerr);
                     }
                 }
