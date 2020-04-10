@@ -161,23 +161,27 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
 
 #[command]
 fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
-    println!("Printing role list...");
-    msg.channel_id.send_message(&ctx.http, |response| {
-        response.embed(|embed| {
-            let e = embed
-                .title("Role list")
-                .author(|a| {
-                    a.name(&CONFIG.name)
-                        .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
-                })
+    if !CONFIG.allowed_roles.is_empty() {
+        println!("Printing role list...");
+        msg.channel_id.send_message(&ctx.http, |response| {
+            response.embed(|embed| {
+                let e = embed
+                    .title("Role list")
+                    .author(|a| {
+                        a.name(&CONFIG.name)
+                            .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                    })
                 .color(Color::from_rgb(127, 127, 255))
-                .thumbnail(&CONFIG.thumbnail);
-            for (name, description) in CONFIG.allowed_roles.iter() {
-                e.field(name, description, true);
-            }
-            e
-        });
-        response
-    })?;
+                    .thumbnail(&CONFIG.thumbnail);
+                for (name, description) in CONFIG.allowed_roles.iter() {
+                    e.field(name, description, true);
+                }
+                e
+            });
+            response
+        })?;
+    } else {
+        msg.react(&ctx.http, REACT_FAIL)?;
+    }
     Ok(())
 }
