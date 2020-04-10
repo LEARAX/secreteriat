@@ -2,6 +2,7 @@ token = "TOKEN"
 name = "EMBED_AUTHOR_NAME"
 thumbnail = "THUMBNAIL_URL"
 bot_channel = "BOT_CHANNEL"
+owners = ["OWNER_ID"]
 
 [public_roles]
 "ROLE_NAME" = "ROLE_DESCRIPTION"

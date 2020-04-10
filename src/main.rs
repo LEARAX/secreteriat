@@ -7,9 +7,10 @@ use serenity::framework::standard::{
 use serenity::model::{channel::Message, gateway::Ready, user::CurrentUser};
 use serenity::prelude::*;
 use serenity::utils::Color;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashSet};
 use std::fs::File;
 use std::io::prelude::*;
+use std::str::FromStr;
 
 const COMMAND_LIST: &[Command<'static>] = &[
     Command {
@@ -51,8 +52,14 @@ struct Config {
     name: String,
     thumbnail: String,
     bot_channel: String,
+    owners: Vec<String>,
     public_roles: BTreeMap<String, String>,
 }
+
+#[group]
+#[owners_only]
+#[commands(rquery)]
+struct Debug;
 
 #[group]
 #[commands(help, role, roles)]
@@ -72,8 +79,22 @@ fn main() {
     let mut client = Client::new(&CONFIG.token, Handler).expect("Error creating client");
     client.with_framework(
         StandardFramework::new()
-            .configure(|c| c.prefix(">").allow_dm(false).case_insensitivity(true))
+            .configure(|config| {
+                let c = config.prefix(">").allow_dm(false).case_insensitivity(true);
+                if !CONFIG.owners.is_empty() {
+                    let mut processed_owners = vec![];
+                    for owner in CONFIG.owners.iter() {
+                        println!("Adding owner with ID {}", owner);
+                        processed_owners.push(serenity::model::id::UserId(
+                            u64::from_str(owner).expect("Failed to parse owner user ID"),
+                        ))
+                    }
+                    c.owners(processed_owners.into_iter().collect());
+                }
+                c
+            })
             .group(&GENERAL_GROUP)
+            .group(&DEBUG_GROUP)
             .before(|ctx, msg, _| {
                 if let Some(channel) = msg.channel_id.name(&ctx.cache) {
                     channel == CONFIG.bot_channel
@@ -176,6 +197,38 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
         } else {
             msg.react(&ctx.http, REACT_FAIL)?;
             help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
+        }
+    } else {
+        msg.react(&ctx.http, REACT_FAIL)?;
+    }
+    Ok(())
+}
+
+#[command]
+fn rquery(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("DEBUG RQUERY REQUEST");
+    if let Some(guild_id) = msg.guild_id {
+        if let Some(guild) = guild_id.to_guild_cached(&ctx.cache) {
+            msg.channel_id.send_message(&ctx.http, |response| {
+                println!("Sending RQUERY response...");
+                response.embed(|embed| {
+                    let e = embed
+                        .title("Role list")
+                        .author(|a| {
+                            a.name(&CONFIG.name)
+                                .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                        })
+                    .color(Color::from_rgb(127, 127, 255))
+                        .thumbnail(&CONFIG.thumbnail);
+                    for (role_id, role) in guild.read().roles.iter() {
+                        e.field(&role.name, role_id, false);
+                    }
+                    e
+                });
+                response
+            })?;
+        } else {
+            msg.react(&ctx.http, REACT_FAIL)?;
         }
     } else {
         msg.react(&ctx.http, REACT_FAIL)?;
