@@ -172,8 +172,8 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
                 })
                 .color(Color::from_rgb(127, 127, 255))
                 .thumbnail(&CONFIG.thumbnail);
-            for role in &CONFIG.allowed_roles {
-                e.field(role.0, role.1, true);
+            for (name, description) in CONFIG.allowed_roles.iter() {
+                e.field(name, description, true);
             }
             e
         });
