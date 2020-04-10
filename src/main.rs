@@ -103,8 +103,14 @@ fn main() {
                 }
             })
             .on_dispatch_error(|ctx, msg, err| {
-                eprintln!("ENCOUNTERED ERROR: {:?}", err);
-                msg.react(&ctx.http, REACT_FAIL).unwrap();
+                eprintln!("ENCOUNTERED UNHANDLED ERROR: {:?}", err);
+                match msg.react(&ctx.http, REACT_FAIL) {
+                    Ok(_) => eprintln!("Encountered general error: {:?}", err),
+                    Err(rerr) => {
+                        eprintln!("Encountered general error: {:?}", err);
+                        eprintln!("Encountered additional reaction error: {:?}", rerr);
+                    }
+                }
             }),
     );
 
@@ -144,31 +150,31 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     if !CONFIG.public_roles.is_empty() {
         println!("Role command applicable");
         if msg_split.len() >= 2 {
-            let role_name = &msg.content[6..];
-            let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
-            let mut max_similarity_pair = None;
-            println!("Searching for similar roles...");
-            for key in CONFIG.public_roles.keys() {
-                let similarity = trigram::similarity(key, role_name);
-                println!("Key {} has similarity: {}", key, similarity);
-                if let Some((max_similarity, _)) = max_similarity_pair {
-                    if similarity > max_similarity {
-                        max_similarity_pair = Some((similarity, key));
+            if let Some(guild_id) = msg.guild_id {
+                if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
+                    let role_name = &msg.content[6..];
+                    let mut member = arc.read().member(&ctx.http, msg.author.id)?;
+                    let mut max_similarity_pair = None;
+                    println!("Searching for similar roles...");
+                    for key in CONFIG.public_roles.keys() {
+                        let similarity = trigram::similarity(key, role_name);
+                        println!("Key {} has similarity: {}", key, similarity);
+                        if let Some((max_similarity, _)) = max_similarity_pair {
+                            if similarity > max_similarity {
+                                max_similarity_pair = Some((similarity, key));
+                            }
+                        } else if similarity > 0.0 {
+                            max_similarity_pair = Some((similarity, key));
+                        }
                     }
-                } else if similarity > 0.0 {
-                    max_similarity_pair = Some((similarity, key));
-                }
-            }
-            if let Some((_, matched_role)) = max_similarity_pair {
-                println!("Matched role {}", matched_role);
-                if CONFIG.public_roles.contains_key(matched_role) {
-                    println!("Role is whitelisted");
-                    if let Some(guild_id) = msg.guild_id {
-                        if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
+                    if let Some((_, matched_role)) = max_similarity_pair {
+                        println!("Matched role {}", matched_role);
+                        if CONFIG.public_roles.contains_key(matched_role) {
+                            println!("Role is whitelisted");
                             println!("Grabbed guild");
                             if let Some(role) = arc.read().role_by_name(matched_role) {
                                 println!("Found role");
-                                if msg.member.as_ref().unwrap().roles.contains(&role.id) {
+                                if member.roles.contains(&role.id) {
                                     println!("Removing role {} from user...", &role.name);
                                     let reaction = match member.remove_role(&ctx.http, role.id) {
                                         Ok(_) => REACT_SUCCESS,
@@ -188,19 +194,19 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                                 msg.react(&ctx.http, REACT_FAIL)?;
                             }
                         } else {
-                            eprintln!("Failed to cache guild");
+                            eprintln!("Similarity search potentially returned malformed result");
                             msg.react(&ctx.http, REACT_FAIL)?;
                         }
                     } else {
-                        eprintln!("Failed to grab guild");
+                        println!("Similarity search found no results");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
-                    eprintln!("Similarity search potentially returned malformed result");
+                    eprintln!("Failed to cache guild");
                     msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
-                println!("Similarity search found no results");
+                eprintln!("Failed to grab guild");
                 msg.react(&ctx.http, REACT_FAIL)?;
             }
         } else {
