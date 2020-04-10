@@ -218,7 +218,7 @@ fn rquery(ctx: &mut Context, msg: &Message) -> CommandResult {
                             a.name(&CONFIG.name)
                                 .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                         })
-                    .color(Color::from_rgb(127, 127, 255))
+                        .color(Color::from_rgb(127, 127, 255))
                         .thumbnail(&CONFIG.thumbnail);
                     for (role_id, role) in guild.read().roles.iter() {
                         e.field(&role.name, role_id, false);
