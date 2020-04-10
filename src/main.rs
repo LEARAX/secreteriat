@@ -7,7 +7,7 @@ use serenity::framework::standard::{
 use serenity::model::{channel::Message, gateway::Ready, user::CurrentUser};
 use serenity::prelude::*;
 use serenity::utils::Color;
-use std::collections::{BTreeMap, HashSet};
+use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::prelude::*;
 use std::str::FromStr;
