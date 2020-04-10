@@ -141,8 +141,11 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
             if let Some((_, matched_role)) = max_similarity_pair {
                 println!("Matched role {}", matched_role);
                 if CONFIG.public_roles.contains_key(matched_role) {
+                    println!("Role is whitelisted");
                     if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
+                        println!("Grabbed guild");
                         if let Some(role) = arc.read().role_by_name(matched_role) {
+                            println!("Found role");
                             if msg.member.as_ref().unwrap().roles.contains(&role.id) {
                                 println!("Removing role {} from user...", &role.name);
                                 let reaction = match member.remove_role(&ctx.http, role.id) {
