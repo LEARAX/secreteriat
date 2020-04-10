@@ -7,6 +7,7 @@ use serenity::framework::standard::{
 use serenity::model::{channel::Message, gateway::Ready, user::CurrentUser};
 use serenity::prelude::*;
 use serenity::utils::Color;
+use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -50,7 +51,7 @@ struct Config {
     name: String,
     thumbnail: String,
     bot_channel: String,
-    allowed_roles: std::collections::BTreeMap<String, String>,
+    public_roles: BTreeMap<String, String>,
 }
 
 #[group]
@@ -71,10 +72,7 @@ fn main() {
     let mut client = Client::new(&CONFIG.token, Handler).expect("Error creating client");
     client.with_framework(
         StandardFramework::new()
-            .configure(|c| {
-                c.prefix(">");
-                c.allow_dm(false)
-            })
+            .configure(|c| c.prefix(">").allow_dm(false).case_insensitivity(true))
             .group(&GENERAL_GROUP)
             .before(|ctx, msg, _| {
                 if let Some(channel) = msg.channel_id.name(&ctx.cache) {
@@ -120,28 +118,51 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
 
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("Role command called");
     let msg_split = msg.content.split(" ").collect::<Vec<&str>>();
-    if msg_split.len() >= 2 {
-        let role_name = &msg.content[6..];
-        let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
-
-        if CONFIG.allowed_roles.contains_key(&String::from(role_name)) {
-            if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
-                if let Some(role) = arc.read().role_by_name(role_name) {
-                    if msg.member.as_ref().unwrap().roles.contains(&role.id) {
-                        println!("Removing role {} from user...", &role.name);
-                        let reaction = match member.remove_role(&ctx.http, role.id) {
-                            Ok(_) => REACT_SUCCESS,
-                            Err(_) => REACT_FAIL,
-                        };
-                        msg.react(&ctx.http, reaction)?;
+    if !CONFIG.public_roles.is_empty() {
+        println!("Role command applicable");
+        if msg_split.len() >= 2 {
+            let role_name = &msg.content[6..];
+            let mut member = msg.guild_id.unwrap().member(&ctx.http, msg.author.id)?;
+            let mut max_similarity_pair = None;
+            println!("Searching for similar roles...");
+            for key in CONFIG.public_roles.keys() {
+                let similarity = trigram::similarity(key, role_name);
+                println!("Key {} has similarity: {}", key, similarity);
+                if let Some((max_similarity, _)) = max_similarity_pair {
+                    if similarity > max_similarity {
+                        max_similarity_pair = Some((similarity, key));
+                    }
+                } else if similarity > 0.0 {
+                    max_similarity_pair = Some((similarity, key));
+                }
+            }
+            if let Some((_, matched_role)) = max_similarity_pair {
+                println!("Matched role {}", matched_role);
+                if CONFIG.public_roles.contains_key(matched_role) {
+                    if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
+                        if let Some(role) = arc.read().role_by_name(matched_role) {
+                            if msg.member.as_ref().unwrap().roles.contains(&role.id) {
+                                println!("Removing role {} from user...", &role.name);
+                                let reaction = match member.remove_role(&ctx.http, role.id) {
+                                    Ok(_) => REACT_SUCCESS,
+                                    Err(_) => REACT_FAIL,
+                                };
+                                msg.react(&ctx.http, reaction)?;
+                            } else {
+                                println!("Adding role {} to user...", &role.name);
+                                let reaction = match member.add_role(&ctx.http, role.id) {
+                                    Ok(_) => REACT_SUCCESS,
+                                    Err(_) => REACT_FAIL,
+                                };
+                                msg.react(&ctx.http, reaction)?;
+                            }
+                        } else {
+                            msg.react(&ctx.http, REACT_FAIL)?;
+                        }
                     } else {
-                        println!("Adding role {} to user...", &role.name);
-                        let reaction = match member.add_role(&ctx.http, role.id) {
-                            Ok(_) => REACT_SUCCESS,
-                            Err(_) => REACT_FAIL,
-                        };
-                        msg.react(&ctx.http, reaction)?;
+                        msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
                     msg.react(&ctx.http, REACT_FAIL)?;
@@ -151,17 +172,17 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
             }
         } else {
             msg.react(&ctx.http, REACT_FAIL)?;
+            help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
         }
     } else {
         msg.react(&ctx.http, REACT_FAIL)?;
-        help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
     }
     Ok(())
 }
 
 #[command]
 fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
-    if !CONFIG.allowed_roles.is_empty() {
+    if !CONFIG.public_roles.is_empty() {
         println!("Printing role list...");
         msg.channel_id.send_message(&ctx.http, |response| {
             response.embed(|embed| {
@@ -171,9 +192,9 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
                         a.name(&CONFIG.name)
                             .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                     })
-                .color(Color::from_rgb(127, 127, 255))
+                    .color(Color::from_rgb(127, 127, 255))
                     .thumbnail(&CONFIG.thumbnail);
-                for (name, description) in CONFIG.allowed_roles.iter() {
+                for (name, description) in CONFIG.public_roles.iter() {
                     e.field(name, description, true);
                 }
                 e
