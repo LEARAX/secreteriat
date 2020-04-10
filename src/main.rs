@@ -103,7 +103,7 @@ fn main() {
                 }
             })
             .on_dispatch_error(|ctx, msg, err| {
-                println!("UNHANDLED ERROR: {:?}", err);
+                eprintln!("ENCOUNTERED ERROR: {:?}", err);
                 msg.react(&ctx.http, REACT_FAIL).unwrap();
             }),
     );
@@ -163,35 +163,44 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                 println!("Matched role {}", matched_role);
                 if CONFIG.public_roles.contains_key(matched_role) {
                     println!("Role is whitelisted");
-                    if let Some(arc) = msg.guild_id.unwrap().to_guild_cached(&ctx.cache) {
-                        println!("Grabbed guild");
-                        if let Some(role) = arc.read().role_by_name(matched_role) {
-                            println!("Found role");
-                            if msg.member.as_ref().unwrap().roles.contains(&role.id) {
-                                println!("Removing role {} from user...", &role.name);
-                                let reaction = match member.remove_role(&ctx.http, role.id) {
-                                    Ok(_) => REACT_SUCCESS,
-                                    Err(_) => REACT_FAIL,
-                                };
-                                msg.react(&ctx.http, reaction)?;
+                    if let Some(guild_id) = msg.guild_id {
+                        if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
+                            println!("Grabbed guild");
+                            if let Some(role) = arc.read().role_by_name(matched_role) {
+                                println!("Found role");
+                                if msg.member.as_ref().unwrap().roles.contains(&role.id) {
+                                    println!("Removing role {} from user...", &role.name);
+                                    let reaction = match member.remove_role(&ctx.http, role.id) {
+                                        Ok(_) => REACT_SUCCESS,
+                                        Err(_) => REACT_FAIL,
+                                    };
+                                    msg.react(&ctx.http, reaction)?;
+                                } else {
+                                    println!("Adding role {} to user...", &role.name);
+                                    let reaction = match member.add_role(&ctx.http, role.id) {
+                                        Ok(_) => REACT_SUCCESS,
+                                        Err(_) => REACT_FAIL,
+                                    };
+                                    msg.react(&ctx.http, reaction)?;
+                                }
                             } else {
-                                println!("Adding role {} to user...", &role.name);
-                                let reaction = match member.add_role(&ctx.http, role.id) {
-                                    Ok(_) => REACT_SUCCESS,
-                                    Err(_) => REACT_FAIL,
-                                };
-                                msg.react(&ctx.http, reaction)?;
+                                eprintln!("Failed to find role");
+                                msg.react(&ctx.http, REACT_FAIL)?;
                             }
                         } else {
+                            eprintln!("Failed to cache guild");
                             msg.react(&ctx.http, REACT_FAIL)?;
                         }
                     } else {
+                        eprintln!("Failed to grab guild");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
+                    eprintln!("Similarity search potentially returned malformed result");
                     msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
+                println!("Similarity search found no results");
                 msg.react(&ctx.http, REACT_FAIL)?;
             }
         } else {
