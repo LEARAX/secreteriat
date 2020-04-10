@@ -106,9 +106,7 @@ fn main() {
                 eprintln!("ENCOUNTERED UNHANDLED ERROR: {:?}", err);
                 match msg.react(&ctx.http, REACT_FAIL) {
                     Ok(_) => {}
-                    Err(rerr) => {
-                        eprintln!("Encountered additional reaction error: {:?}", rerr);
-                    }
+                    Err(rerr) => eprintln!("Encountered additional reaction error: {:?}", rerr),
                 }
             }),
     );
