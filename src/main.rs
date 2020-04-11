@@ -58,7 +58,7 @@ struct Config {
 
 #[group]
 #[owners_only]
-#[commands(rquery)]
+#[commands(rquery, rrename, rverify)]
 struct Debug;
 
 #[group]
@@ -128,7 +128,7 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
                     a.name(&CONFIG.name)
                         .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                 })
-                .color(Color::from_rgb(127, 127, 255))
+                .color(Color::FADED_PURPLE)
                 .thumbnail(&CONFIG.thumbnail);
             for command in COMMAND_LIST.iter() {
                 e.field(command.name, command.description, true);
@@ -230,7 +230,7 @@ fn rquery(ctx: &mut Context, msg: &Message) -> CommandResult {
                             a.name(&CONFIG.name)
                                 .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                         })
-                        .color(Color::from_rgb(127, 127, 255))
+                        .color(Color::BLUE)
                         .thumbnail(&CONFIG.thumbnail);
                     for (role_id, role) in guild.read().roles.iter() {
                         e.field(&role.name, role_id, false);
@@ -240,6 +240,93 @@ fn rquery(ctx: &mut Context, msg: &Message) -> CommandResult {
                 response
             })?;
         } else {
+            eprintln!("Failed to cache guild");
+            msg.react(&ctx.http, REACT_FAIL)?;
+        }
+    } else {
+        eprintln!("Failed to grab guild");
+        msg.react(&ctx.http, REACT_FAIL)?;
+    }
+    Ok(())
+}
+
+#[command]
+fn rrename(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("DEBUG ROLE RENAME REQUEST");
+    if let Ok(old_id) = msg.content[9..27].parse::<u64>() {
+        println!("Old ID: {}", old_id);
+        let new_name = &msg.content[28..];
+        println!("Requested name: {}", new_name);
+        if let Some(guild_id) = msg.guild_id {
+            if let Some(guild) = guild_id.to_guild_cached(&ctx.cache) {
+                let guild = guild.read();
+                let mut role_wrap = None;
+                for (role_id, role) in guild.roles.iter() {
+                    if role_id.as_u64() == &old_id {
+                        println!("Found role: {}", role.name);
+                        role_wrap = Some(role);
+                        break;
+                    }
+                }
+                if let Some(role) = role_wrap {
+                    println!("Renaming role...");
+                    match role.edit(&ctx, |r| r.name(new_name)) {
+                        Ok(_) => msg.react(&ctx.http, REACT_SUCCESS)?,
+                        Err(err) => {
+                            msg.react(&ctx.http, REACT_FAIL)?;
+                            eprintln!("Error encountered: {}", err);
+                        }
+                    }
+                } else {
+                    msg.react(&ctx.http, REACT_FAIL)?;
+                    eprintln!("Failed to locate role")
+                }
+            } else {
+                eprintln!("Failed to cache guild");
+                msg.react(&ctx.http, REACT_FAIL)?;
+            }
+        } else {
+            msg.react(&ctx.http, REACT_FAIL)?;
+        }
+    } else {
+        eprintln!("Failed to parse ID");
+        msg.react(&ctx.http, REACT_FAIL)?;
+    }
+    Ok(())
+}
+
+#[command]
+fn rverify(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("DEBUG VERIFICATION REQUEST");
+    if let Some(guild_id) = msg.guild_id {
+        if let Some(guild) = guild_id.to_guild_cached(&ctx.cache) {
+            msg.channel_id.send_message(&ctx.http, |response| {
+                response.embed(|embed| {
+                    let mut color = Color::BLUE;
+                    let e = embed
+                        .title("Role verification list")
+                        .author(|a| {
+                            a.name(&CONFIG.name)
+                                .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
+                        })
+                        .thumbnail(&CONFIG.thumbnail);
+                    for (role, _) in CONFIG.public_roles.iter() {
+                        if let Some(success_role) = guild.read().role_by_name(role) {
+                            e.field(&success_role.name, "SUCCESS: Found role.", false);
+                        // TODO Check role permissions
+                        } else {
+                            // TODO Fuzzy search for similar roles
+                            e.field(role, "ERROR: Role not found!", false);
+                            color = Color::DARK_RED;
+                        }
+                    }
+                    e.color(color);
+                    e
+                });
+                response
+            })?;
+        } else {
+            eprintln!("Failed to cache guild");
             msg.react(&ctx.http, REACT_FAIL)?;
         }
     } else {
@@ -260,7 +347,7 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
                         a.name(&CONFIG.name)
                             .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
                     })
-                    .color(Color::from_rgb(127, 127, 255))
+                    .color(Color::FADED_PURPLE)
                     .thumbnail(&CONFIG.thumbnail);
                 for (name, description) in CONFIG.public_roles.iter() {
                     e.field(name, description, true);
