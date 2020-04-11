@@ -122,7 +122,7 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx.http, |response| {
         response.embed(|embed| {
             let e = embed
-                .title("Command list")
+                .title("Commands")
                 .description("All commands must be prefixed by `>`")
                 .author(|a| {
                     a.name(&CONFIG.name)
@@ -304,7 +304,7 @@ fn rverify(ctx: &mut Context, msg: &Message) -> CommandResult {
                 response.embed(|embed| {
                     let mut color = Color::BLUE;
                     let e = embed
-                        .title("Role verification list")
+                        .title("Role verification")
                         .author(|a| {
                             a.name(&CONFIG.name)
                                 .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
@@ -342,7 +342,7 @@ fn roles(ctx: &mut Context, msg: &Message) -> CommandResult {
         msg.channel_id.send_message(&ctx.http, |response| {
             response.embed(|embed| {
                 let e = embed
-                    .title("Role list")
+                    .title("Roles")
                     .author(|a| {
                         a.name(&CONFIG.name)
                             .icon_url(CurrentUser::face(&ctx.http.get_current_user().unwrap()))
