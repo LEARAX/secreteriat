@@ -194,7 +194,7 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                             msg.react(&ctx.http, REACT_FAIL)?;
                         }
                     } else {
-                        println!("Similarity search found no results");
+                        eprintln!("Similarity search found no results");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
