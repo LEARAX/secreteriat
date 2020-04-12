@@ -143,10 +143,9 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     println!("Role command called");
-    let msg_split = msg.content.split(" ").collect::<Vec<&str>>();
     if !CONFIG.public_roles.is_empty() {
         println!("Role command applicable");
-        if msg_split.len() >= 2 {
+        if msg.content.len() > 6 {
             if let Some(guild_id) = msg.guild_id {
                 if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
                     let role_name = &msg.content[6..];
