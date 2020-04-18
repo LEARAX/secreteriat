@@ -58,7 +58,7 @@ struct Config {
 
 #[group]
 #[owners_only]
-#[commands(rquery, rrename, rverify)]
+#[commands(carchive, rquery, rrename, rverify)]
 struct Debug;
 
 #[group]
@@ -114,6 +114,19 @@ fn main() {
     if let Err(err) = client.start() {
         panic!("An error occurred while running the client: {:?}", err);
     }
+}
+
+#[command]
+fn carchive(ctx: &mut Context, msg: &Message) -> CommandResult {
+    println!("DEBUG ARCHIVE REQUEST");
+    let archive_count;
+    if msg.content.len() < 11 {
+        archive_count = 50;
+    } else {
+        archive_count = u64::from_str(&msg.content[10..])?
+    }
+    println!("{}", archive_count);
+    Ok(())
 }
 
 #[command]
