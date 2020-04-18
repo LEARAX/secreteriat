@@ -116,6 +116,26 @@ fn main() {
     }
 }
 
+fn role_search<'a>(
+    name: &'a str,
+    role_tree: &'a BTreeMap<String, String>,
+) -> Option<(f32, &'a String)> {
+    let mut max_similarity_pair = None;
+    println!("Searching for similar roles...");
+    for key in role_tree.keys() {
+        let similarity = trigram::similarity(key, name);
+        println!("Key {} has similarity: {}", key, similarity);
+        if let Some((max_similarity, _)) = max_similarity_pair {
+            if similarity > max_similarity {
+                max_similarity_pair = Some((similarity, key));
+            }
+        } else if similarity > 0.0 {
+            max_similarity_pair = Some((similarity, key));
+        }
+    }
+    max_similarity_pair
+}
+
 #[command]
 fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
     println!("Printing help message...");
@@ -143,74 +163,58 @@ fn help(ctx: &mut Context, msg: &Message) -> CommandResult {
 #[command]
 fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
     println!("Role command called");
-    if !CONFIG.public_roles.is_empty() {
-        println!("Role command applicable");
-        if msg.content.len() > 6 {
-            if let Some(guild_id) = msg.guild_id {
-                if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
-                    let role_name = &msg.content[6..];
-                    let mut member = arc.read().member(&ctx.http, msg.author.id)?;
-                    let mut max_similarity_pair = None;
-                    println!("Searching for similar roles...");
-                    for key in CONFIG.public_roles.keys() {
-                        let similarity = trigram::similarity(key, role_name);
-                        println!("Key {} has similarity: {}", key, similarity);
-                        if let Some((max_similarity, _)) = max_similarity_pair {
-                            if similarity > max_similarity {
-                                max_similarity_pair = Some((similarity, key));
-                            }
-                        } else if similarity > 0.0 {
-                            max_similarity_pair = Some((similarity, key));
-                        }
-                    }
-                    if let Some((_, matched_role)) = max_similarity_pair {
-                        println!("Matched role {}", matched_role);
-                        if CONFIG.public_roles.contains_key(matched_role) {
-                            println!("Role is whitelisted");
-                            println!("Grabbed guild");
-                            if let Some(role) = arc.read().role_by_name(matched_role) {
-                                println!("Found role");
-                                if member.roles.contains(&role.id) {
-                                    println!("Removing role {} from user...", &role.name);
-                                    let reaction = match member.remove_role(&ctx.http, role.id) {
-                                        Ok(_) => REACT_SUCCESS,
-                                        Err(_) => REACT_FAIL,
-                                    };
-                                    msg.react(&ctx.http, reaction)?;
-                                } else {
-                                    println!("Adding role {} to user...", &role.name);
-                                    let reaction = match member.add_role(&ctx.http, role.id) {
-                                        Ok(_) => REACT_SUCCESS,
-                                        Err(_) => REACT_FAIL,
-                                    };
-                                    msg.react(&ctx.http, reaction)?;
-                                }
+    if msg.content.len() > 6 {
+        if let Some(guild_id) = msg.guild_id {
+            if let Some(arc) = guild_id.to_guild_cached(&ctx.cache) {
+                let mut member = arc.read().member(&ctx.http, msg.author.id)?;
+                if let Some(matched_role) = role_search(&msg.content[6..], &CONFIG.public_roles) {
+                    println!(
+                        "Matched role {} with similarity {}",
+                        matched_role.1, matched_role.0
+                    );
+                    if CONFIG.public_roles.contains_key(matched_role.1) {
+                        println!("Role is whitelisted");
+                        println!("Grabbed guild");
+                        if let Some(role) = arc.read().role_by_name(matched_role.1) {
+                            println!("Found role");
+                            if member.roles.contains(&role.id) {
+                                println!("Removing role {} from user...", &role.name);
+                                let reaction = match member.remove_role(&ctx.http, role.id) {
+                                    Ok(_) => REACT_SUCCESS,
+                                    Err(_) => REACT_FAIL,
+                                };
+                                msg.react(&ctx.http, reaction)?;
                             } else {
-                                eprintln!("Failed to find role");
-                                msg.react(&ctx.http, REACT_FAIL)?;
+                                println!("Adding role {} to user...", &role.name);
+                                let reaction = match member.add_role(&ctx.http, role.id) {
+                                    Ok(_) => REACT_SUCCESS,
+                                    Err(_) => REACT_FAIL,
+                                };
+                                msg.react(&ctx.http, reaction)?;
                             }
                         } else {
-                            eprintln!("Similarity search potentially returned malformed result");
+                            eprintln!("Failed to find role");
                             msg.react(&ctx.http, REACT_FAIL)?;
                         }
                     } else {
-                        eprintln!("Similarity search found no results");
+                        eprintln!("Similarity search potentially returned malformed result");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
-                    eprintln!("Failed to cache guild");
+                    eprintln!("Similarity search found no results");
                     msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
-                eprintln!("Failed to grab guild");
+                eprintln!("Failed to cache guild");
                 msg.react(&ctx.http, REACT_FAIL)?;
             }
         } else {
+            eprintln!("Failed to grab guild");
             msg.react(&ctx.http, REACT_FAIL)?;
-            help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
         }
     } else {
         msg.react(&ctx.http, REACT_FAIL)?;
+        help(ctx, msg, Args::new(&msg.content, &[Delimiter::Single(' ')]))?;
     }
     Ok(())
 }
