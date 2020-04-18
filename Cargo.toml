@@ -13,7 +13,7 @@ no-dev-version = true
 pre-release-hook = ["cargo", "fmt"]
 
 [dependencies]
-serenity = "0.8.1"
+serenity = "0.8.4"
 serde = {version = "1.0.106", features = ["derive"]}
 toml = "0.5.6"
 lazy_static = "1.4.0"
