@@ -172,36 +172,29 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                         "Matched role {} with similarity {}",
                         matched_role.1, matched_role.0
                     );
-                    if CONFIG.public_roles.contains_key(matched_role.1) {
-                        println!("Role is whitelisted");
-                        println!("Grabbed guild");
-                        if let Some(role) = arc.read().role_by_name(matched_role.1) {
-                            println!("Found role");
-                            if member.roles.contains(&role.id) {
-                                println!("Removing role {} from user...", &role.name);
-                                let reaction = match member.remove_role(&ctx.http, role.id) {
-                                    Ok(_) => REACT_SUCCESS,
-                                    Err(_) => REACT_FAIL,
-                                };
-                                msg.react(&ctx.http, reaction)?;
-                            } else {
-                                println!("Adding role {} to user...", &role.name);
-                                let reaction = match member.add_role(&ctx.http, role.id) {
-                                    Ok(_) => REACT_SUCCESS,
-                                    Err(_) => REACT_FAIL,
-                                };
-                                msg.react(&ctx.http, reaction)?;
-                            }
+                    if let Some(role) = arc.read().role_by_name(matched_role.1) {
+                        println!("Found role");
+                        if member.roles.contains(&role.id) {
+                            println!("Removing role {} from user...", &role.name);
+                            let reaction = match member.remove_role(&ctx.http, role.id) {
+                                Ok(_) => REACT_SUCCESS,
+                                Err(_) => REACT_FAIL,
+                            };
+                            msg.react(&ctx.http, reaction)?;
                         } else {
-                            eprintln!("Failed to find role");
-                            msg.react(&ctx.http, REACT_FAIL)?;
+                            println!("Adding role {} to user...", &role.name);
+                            let reaction = match member.add_role(&ctx.http, role.id) {
+                                Ok(_) => REACT_SUCCESS,
+                                Err(_) => REACT_FAIL,
+                            };
+                            msg.react(&ctx.http, reaction)?;
                         }
                     } else {
-                        eprintln!("Similarity search potentially returned malformed result");
+                        eprintln!("Failed to find role");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
-                    eprintln!("Similarity search found no results");
+                    eprintln!("Similarity search potentially returned malformed result");
                     msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
