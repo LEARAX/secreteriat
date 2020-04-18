@@ -190,11 +190,11 @@ fn role(ctx: &mut Context, msg: &Message) -> CommandResult {
                             msg.react(&ctx.http, reaction)?;
                         }
                     } else {
-                        eprintln!("Failed to find role");
+                        eprintln!("Failed to find role in cached guild");
                         msg.react(&ctx.http, REACT_FAIL)?;
                     }
                 } else {
-                    eprintln!("Similarity search found no results");
+                    eprintln!("Failed to find similar roles");
                     msg.react(&ctx.http, REACT_FAIL)?;
                 }
             } else {
