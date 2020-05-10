@@ -1,4 +1,4 @@
-FROM rust:1.42
+FROM rust:1.43.1
 
 WORKDIR /usr/src/secreteriat
 COPY . .
