@@ -1,3 +1,4 @@
 /target
 /rusty-tags.*
 /deploy
+/config.toml
